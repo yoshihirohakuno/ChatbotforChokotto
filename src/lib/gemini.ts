@@ -1,7 +1,7 @@
 import CHOKOTTO_KNOWLEDGE_FULL from '../data/scraped-knowledge.txt?raw';
 
 export async function askGemini(prompt: string, apiKey: string, history: { role: string, text: string }[] = []) {
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey;
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + apiKey;
 
     const contents = [...history, { role: 'user', text: prompt }].map(msg => ({
         role: msg.role === 'user' ? 'user' : 'model',
