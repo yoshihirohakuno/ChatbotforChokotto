@@ -1,7 +1,24 @@
 import CHOKOTTO_KNOWLEDGE_FULL from '../data/scraped-knowledge.txt?raw';
 
+async function fetchWithRetry(url: string, options: RequestInit, retries = 3): Promise<Response> {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        const response = await fetch(url, options);
+        if (response.status === 429) {
+            if (attempt < retries) {
+                // Rate limited — wait and retry
+                const retryAfterMs = 45000; // wait 45 seconds
+                console.warn(`Rate limited. Retrying in ${retryAfterMs / 1000}s... (attempt ${attempt}/${retries})`);
+                await new Promise(r => setTimeout(r, retryAfterMs));
+                continue;
+            }
+        }
+        return response;
+    }
+    throw new Error('レート制限により応答できませんでした。しばらく待ってから再度お試しください。');
+}
+
 export async function askGemini(prompt: string, apiKey: string, history: { role: string, text: string }[] = []) {
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + apiKey;
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;
 
     const contents = [...history, { role: 'user', text: prompt }].map(msg => ({
         role: msg.role === 'user' ? 'user' : 'model',
@@ -23,16 +40,16 @@ export async function askGemini(prompt: string, apiKey: string, history: { role:
         }]
     };
 
-    const response = await fetch(url, {
+    const body = JSON.stringify({
+        contents,
+        systemInstruction,
+        generationConfig: { temperature: 0.1 }
+    });
+
+    const response = await fetchWithRetry(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents,
-            systemInstruction,
-            generationConfig: {
-                temperature: 0.1, // Even lower temperature because context is huge and we want exact answers
-            }
-        }),
+        body,
     });
 
     if (!response.ok) {
@@ -46,3 +63,5 @@ export async function askGemini(prompt: string, apiKey: string, history: { role:
     }
     return data.candidates[0].content.parts[0].text;
 }
+
+
