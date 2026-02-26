@@ -17,8 +17,9 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 3): P
     throw new Error('レート制限により応答できませんでした。しばらく待ってから再度お試しください。');
 }
 
-export async function askGemini(prompt: string, apiKey: string, history: { role: string, text: string }[] = []) {
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;
+export async function askGemini(prompt: string, history: { role: string, text: string }[] = []) {
+    // Send request to Vercel proxy
+    const url = '/api/chat';
 
     const contents = [...history, { role: 'user', text: prompt }].map(msg => ({
         role: msg.role === 'user' ? 'user' : 'model',
@@ -53,8 +54,8 @@ export async function askGemini(prompt: string, apiKey: string, history: { role:
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Gemini API call failed');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.error?.message || 'チャットサーバーへの接続に失敗しました');
     }
 
     const data = await response.json();

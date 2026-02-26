@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, Send, Bot, KeyRound, ExternalLink } from 'lucide-react';
+import { Send, Bot, ExternalLink } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { askGemini } from './lib/gemini';
 import './index.css';
@@ -11,10 +11,6 @@ type Message = {
 };
 
 export default function App() {
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
-  const [showSettings, setShowSettings] = useState(!localStorage.getItem('gemini_api_key'));
-  const [tempKey, setTempKey] = useState(apiKey);
-
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', role: 'model', text: 'こんにちは！ちょこっと製本工房のサポートAIです。製本やご注文について何かご質問はございますか？' }
   ]);
@@ -30,23 +26,9 @@ export default function App() {
     scrollToBottom();
   }, [messages, isLoading]);
 
-  const handleSaveSettings = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (tempKey.trim()) {
-      localStorage.setItem('gemini_api_key', tempKey.trim());
-      setApiKey(tempKey.trim());
-      setShowSettings(false);
-    }
-  };
-
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim() || isLoading) return;
-
-    if (!apiKey) {
-      setShowSettings(true);
-      return;
-    }
 
     const userText = input.trim();
     setInput('');
@@ -57,7 +39,8 @@ export default function App() {
 
     try {
       const historyMsg = messages.map(m => ({ role: m.role, text: m.text }));
-      const responseText = await askGemini(userText, apiKey, historyMsg);
+      // Using the backend proxy now, no API key needed from the frontend
+      const responseText = await askGemini(userText, historyMsg);
 
       const newBotMsg: Message = { id: (Date.now() + 1).toString(), role: 'model', text: responseText };
       setMessages(prev => [...prev, newBotMsg]);
@@ -83,21 +66,11 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <header className="header">
+      <header className="header" style={{ justifyContent: 'center' }}>
         <div className="header-title">
           <Bot size={28} color="var(--primary-color)" />
           ちょこっとAIサポート
         </div>
-        <button
-          className="icon-btn"
-          onClick={() => {
-            setTempKey(apiKey);
-            setShowSettings(true);
-          }}
-          title="Settings"
-        >
-          <Settings size={22} />
-        </button>
       </header>
 
       <main className="chat-area">
@@ -151,50 +124,6 @@ export default function App() {
           </a>
         </div>
       </div>
-
-      {showSettings && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h2 className="modal-title">APIキーの設定</h2>
-              <p className="modal-desc">
-                チャットボットを利用するには、Google Gemini APIキーが必要です。
-                入力されたキーはブラウザ上(localStorage)にのみ保存されます。
-              </p>
-            </div>
-            <form onSubmit={handleSaveSettings}>
-              <div className="form-group">
-                <label className="form-label">Gemini API Key</label>
-                <div style={{ position: 'relative' }}>
-                  <KeyRound size={18} style={{ position: 'absolute', left: '12px', top: '14px', color: 'var(--text-muted)' }} />
-                  <input
-                    type="password"
-                    className="form-input"
-                    style={{ paddingLeft: '2.5rem' }}
-                    value={tempKey}
-                    onChange={(e) => setTempKey(e.target.value)}
-                    placeholder="AIzaSy..."
-                    required
-                  />
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                {apiKey && (
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    style={{ backgroundColor: 'transparent', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
-                    onClick={() => setShowSettings(false)}
-                  >
-                    キャンセル
-                  </button>
-                )}
-                <button type="submit" className="btn-primary">保存して開始</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
