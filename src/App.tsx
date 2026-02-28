@@ -59,7 +59,8 @@ export default function App() {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // 日本語変換中（IME入力中）のエンターキーは送信処理をスキップする
-    if (e.nativeEvent.isComposing) return;
+    // デバイスやブラウザによっては isComposing が false になることがあるため、keyCode 229 等も併用して判定します
+    if (e.nativeEvent.isComposing || e.key === 'Process' || e.keyCode === 229) return;
 
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
