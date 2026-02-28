@@ -58,6 +58,9 @@ export default function App() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // 日本語変換中（IME入力中）のエンターキーは送信処理をスキップする
+    if (e.nativeEvent.isComposing) return;
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -79,7 +82,15 @@ export default function App() {
             <div className="message-bubble">
               {msg.role === 'model' ? (
                 <div className="markdown-body">
-                  <ReactMarkdown>{msg.text}</ReactMarkdown>
+                  <ReactMarkdown
+                    components={{
+                      a: ({ node, ...props }) => (
+                        <a {...props} target="_blank" rel="noopener noreferrer" />
+                      )
+                    }}
+                  >
+                    {msg.text}
+                  </ReactMarkdown>
                 </div>
               ) : (
                 msg.text
